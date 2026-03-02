@@ -526,17 +526,39 @@ function Pipeline({ deals, setDeals, contacts, saving }) {
   );
 }
 
+// ── Activity Form ─────────────────────────────────────────────────────────────
+
+function ActivityForm({ initial, onSave, onClose, title, contacts }) {
+  const [f, setF] = useState(initial);
+  return (
+    <Modal title={title} onClose={onClose}>
+      <div style={{ marginBottom: 14 }}><FieldLabel>Type</FieldLabel><select value={f.type} onChange={e => setF(x => ({...x,type:e.target.value}))} style={inputStyle}>{["Call","Email","Meeting","Task"].map(t => <option key={t}>{t}</option>)}</select></div>
+      <div style={{ marginBottom: 14 }}><FieldLabel>Contact</FieldLabel><select value={f.contactId} onChange={e => setF(x => ({...x,contactId:e.target.value}))} style={inputStyle}><option value="">Select contact…</option>{contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+      <div style={{ marginBottom: 14 }}><FieldLabel>Note</FieldLabel><textarea value={f.note} onChange={e => setF(x => ({...x,note:e.target.value}))} rows={3} style={{...inputStyle, resize:"vertical"}} /></div>
+      <div style={{ marginBottom: 24 }}><FieldLabel>Date</FieldLabel><input type="date" value={f.date} onChange={e => setF(x => ({...x,date:e.target.value}))} style={inputStyle} /></div>
+      <div style={{ display: "flex", gap: 10 }}>
+        <Btn variant="primary" onClick={() => onSave(f)}>{title.startsWith("Edit") ? "Save Changes" : "Log Activity"}</Btn>
+        <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Activities ────────────────────────────────────────────────────────────────
 
 function Activities({ activities, setActivities, contacts, saving }) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ type: "Call", contactId: "", note: "", date: "" });
+  const [editActivity, setEditActivity] = useState(null);
 
-  const handleAdd = () => {
-    setActivities(prev => [{ ...form, id: Date.now(), contactId: Number(form.contactId), done: false }, ...prev]);
+  const handleAdd = (f) => {
+    setActivities(prev => [{ ...f, id: Date.now(), contactId: Number(f.contactId), done: false }, ...prev]);
     setShowForm(false);
-    setForm({ type: "Call", contactId: "", note: "", date: "" });
   };
+  const handleEdit = (f) => {
+    setActivities(prev => prev.map(a => a.id === f.id ? { ...f, contactId: Number(f.contactId) } : a));
+    setEditActivity(null);
+  };
+  const openEdit = (a, e) => { e.stopPropagation(); setEditActivity({ ...a, contactId: String(a.contactId) }); };
   const toggle = (id) => setActivities(prev => prev.map(a => a.id === id ? { ...a, done: !a.done } : a));
   const sorted = [...activities].sort((a, b) => a.done - b.done || new Date(a.date) - new Date(b.date));
   const typeColors = { Call: "#dbeafe", Email: "#ede9fe", Meeting: "#dcfce7", Task: "#fef9c3" };
@@ -567,20 +589,14 @@ function Activities({ activities, setActivities, contacts, saving }) {
                 <div style={{ color: C.text, fontSize: 14, fontWeight: 500, textDecoration: a.done ? "line-through" : "none" }}>{a.note}</div>
                 <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>{contact?.name} · {a.date}</div>
               </div>
+              <button onClick={e => openEdit(a, e)} style={{ width: 28, height: 28, borderRadius: 7, background: C.bg, border: `1px solid ${C.border}`, color: C.textSub, cursor: "pointer", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✎</button>
               <button onClick={() => setActivities(p => p.filter(x => x.id !== a.id))} style={{ width: 28, height: 28, borderRadius: 7, background: "#fef2f2", border: "1px solid #fecaca", color: C.danger, cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>×</button>
             </div>
           );
         })}
       </div>
-      {showForm && (
-        <Modal title="Log Activity" onClose={() => setShowForm(false)}>
-          <div style={{ marginBottom: 14 }}><FieldLabel>Type</FieldLabel><select value={form.type} onChange={e => setForm(f => ({...f,type:e.target.value}))} style={inputStyle}>{["Call","Email","Meeting","Task"].map(t => <option key={t}>{t}</option>)}</select></div>
-          <div style={{ marginBottom: 14 }}><FieldLabel>Contact</FieldLabel><select value={form.contactId} onChange={e => setForm(f => ({...f,contactId:e.target.value}))} style={inputStyle}><option value="">Select contact…</option>{contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-          <div style={{ marginBottom: 14 }}><FieldLabel>Note</FieldLabel><textarea value={form.note} onChange={e => setForm(f => ({...f,note:e.target.value}))} rows={3} style={{...inputStyle, resize:"vertical"}} /></div>
-          <div style={{ marginBottom: 24 }}><FieldLabel>Date</FieldLabel><input type="date" value={form.date} onChange={e => setForm(f => ({...f,date:e.target.value}))} style={inputStyle} /></div>
-          <div style={{ display: "flex", gap: 10 }}><Btn variant="primary" onClick={handleAdd}>Log Activity</Btn><Btn variant="ghost" onClick={() => setShowForm(false)}>Cancel</Btn></div>
-        </Modal>
-      )}
+      {showForm && <ActivityForm title="Log Activity" initial={{ type: "Call", contactId: "", note: "", date: "" }} onSave={handleAdd} onClose={() => setShowForm(false)} contacts={contacts} />}
+      {editActivity && <ActivityForm title="Edit Activity" initial={editActivity} onSave={handleEdit} onClose={() => setEditActivity(null)} contacts={contacts} />}
     </div>
   );
 }
