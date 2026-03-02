@@ -146,7 +146,7 @@ function Btn({ onClick, variant = "ghost", children }) {
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
-function Sidebar({ active, setActive }) {
+function Sidebar({ active, setActive, onLogout }) {
   const items = [
     { key: "dashboard", label: "Dashboard", icon: (
       <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -199,10 +199,13 @@ function Sidebar({ active, setActive }) {
       <div style={{ padding: "16px 20px", borderTop: `1px solid ${C.sidebarBorder}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, #6366f1, #8b5cf6)`, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, color: "#fff", fontSize: 13 }}>U</div>
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ color: "#e2e8f0", fontSize: 13, fontWeight: 600 }}>Your Team</div>
             <div style={{ color: C.sidebarMuted, fontSize: 11 }}>Administrator</div>
           </div>
+          <button onClick={onLogout} title="Sign out" style={{ background: "transparent", border: "none", color: C.sidebarMuted, cursor: "pointer", fontSize: 16, padding: 4, display: "flex", alignItems: "center" }}>
+            <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
         </div>
       </div>
     </nav>
@@ -601,14 +604,64 @@ function Activities({ activities, setActivities, contacts, saving }) {
   );
 }
 
+// ── Login ─────────────────────────────────────────────────────────────────────
+
+const PASSWORD = "wsi2026"; // ← change this to whatever you want
+
+function Login({ onSuccess }) {
+  const [value, setValue] = useState("");
+  const [error, setError] = useState(false);
+  const submit = () => {
+    if (value === PASSWORD) { onSuccess(); setError(false); }
+    else { setError(true); setValue(""); }
+  };
+  return (
+    <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", background: C.sidebarBg, fontFamily: FONT }}>
+      <div style={{ background: C.surface, borderRadius: 20, padding: "48px 44px", width: 380, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", border: `1px solid ${C.border}` }}>
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 36 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: `linear-gradient(135deg, ${C.accent}, #8b5cf6)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="18" height="18" fill="none" stroke="#fff" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C.text, letterSpacing: -0.5 }}>WSI CRM</div>
+            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>Team Access</div>
+          </div>
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          <FieldLabel>Password</FieldLabel>
+          <input
+            type="password"
+            value={value}
+            onChange={e => { setValue(e.target.value); setError(false); }}
+            onKeyDown={e => e.key === "Enter" && submit()}
+            placeholder="Enter password…"
+            autoFocus
+            style={{ ...inputStyle, border: `1.5px solid ${error ? C.danger : C.border}` }}
+          />
+        </div>
+        {error && <div style={{ color: C.danger, fontSize: 12, marginBottom: 12, fontWeight: 500 }}>Incorrect password. Try again.</div>}
+        {!error && <div style={{ marginBottom: 20 }} />}
+        <button onClick={submit} style={{ width: "100%", padding: "13px", background: `linear-gradient(135deg, ${C.accent}, ${C.accentDark})`, color: "#fff", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontFamily: FONT, fontSize: 15, boxShadow: `0 2px 8px rgba(99,102,241,0.35)` }}>
+          Sign In →
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Root ──────────────────────────────────────────────────────────────────────
 
 export default function CRM() {
+  const [authed, setAuthed] = useState(() => sessionStorage.getItem("wsi-authed") === "true");
   const [active, setActive] = useState("dashboard");
   const [contacts, setContacts] = useState(() => loadStore("crm-contacts", initialContacts));
   const [deals, setDeals] = useState(() => loadStore("crm-deals", initialDeals));
   const [activities, setActivities] = useState(() => loadStore("crm-activities", initialActivities));
   const [saving, setSaving] = useState(false);
+
+  const handleLogin = () => { sessionStorage.setItem("wsi-authed", "true"); setAuthed(true); };
+  const handleLogout = () => { sessionStorage.removeItem("wsi-authed"); setAuthed(false); };
 
   useEffect(() => {
     setSaving(true);
@@ -621,10 +674,12 @@ export default function CRM() {
     return () => clearTimeout(t);
   }, [contacts, deals, activities]);
 
+  if (!authed) return <Login onSuccess={handleLogin} />;
+
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: C.bg, fontFamily: FONT }}>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-      <Sidebar active={active} setActive={setActive} />
+      <Sidebar active={active} setActive={setActive} onLogout={handleLogout} />
       <main style={{ flex: 1, padding: "36px 44px", overflowY: "auto", minWidth: 0 }}>
         {active === "dashboard"  && <Dashboard contacts={contacts} deals={deals} activities={activities} />}
         {active === "contacts"   && <Contacts contacts={contacts} setContacts={setContacts} saving={saving} />}
