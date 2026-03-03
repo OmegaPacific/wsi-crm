@@ -577,7 +577,9 @@ export default function CRM(){
   };
 
   const handleEdit=async(table,form)=>{
+    const id=form.id;
     let data={...form};
+    delete data.id;
     if(table==="contacts"){
       data.tags=typeof form.tags==="string"?form.tags.split(",").map(t=>t.trim()).filter(Boolean):form.tags;
       data.value=Number(form.value)||0;
@@ -587,11 +589,14 @@ export default function CRM(){
       data.group_size=Number(form.group_size)||null;
       data.contact_id=Number(form.contact_id)||null;
       data.call_count=Number(form.call_count)||0;
+      data.notes=form.notes||"";
+      data.last_call_date=form.last_call_date||null;
     }
     if(table==="activities"){
       data.contact_id=Number(form.contact_id)||null;
     }
-    const{data:row}=await supabase.from(table).update(data).eq("id",form.id).select().single();
+    const{data:row,error}=await supabase.from(table).update(data).eq("id",id).select().single();
+    if(error)console.error("Update error:",error);
     if(row){
       if(table==="contacts")setContacts(p=>p.map(x=>x.id===row.id?row:x));
       if(table==="deals")setDeals(p=>p.map(x=>x.id===row.id?row:x));
