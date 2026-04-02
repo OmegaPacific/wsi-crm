@@ -524,7 +524,7 @@ export default function CRM(){
     await supabase.from(table).delete().eq("id",id);
     if(table==="deals")setDeals(p=>p.filter(x=>x.id!==id));
     if(table==="activities")setActivities(p=>p.filter(x=>x.id!==id));
-  };
+  }; 
 
   if(!authed)return <Login onSuccess={handleLogin}/>;
   if(loading)return <Spinner/>;
